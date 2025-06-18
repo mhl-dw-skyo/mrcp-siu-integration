@@ -33,18 +33,29 @@ $tableMap = [
 foreach ($tableMap as $moodleTable => $pgTable) {
     echo "<strong>Migrating $moodleTable ➝ $pgTable</strong><br>";
 
-    // Get column names
-    $columns = $DB->get_columns($moodleTable);
-    if (!$columns) {
-        echo "✗ Could not retrieve columns for $moodleTable.<br><hr>";
+    try {
+        $columns = $DB->get_columns($moodleTable); // Use table name without mdl_
+    } catch (Exception $e) {
+        echo "✗ Could not retrieve columns for $moodleTable: " . $e->getMessage() . "<br><hr>";
         continue;
     }
 
-    $columnNames = array_keys($columns);
-    $columnList = implode(", ", $columnNames);
+    if (!$columns) {
+        echo "✗ No columns found for $moodleTable.<br><hr>";
+        continue;
+    }
 
-    // Fetch all records from Moodle
-    $records = $DB->get_records_sql("SELECT $columnList FROM $moodleTable");
+    $columnNames = array_keys((array)$columns);
+    $columnList = implode(", ", array_map(function ($col) {
+        return "\"$col\""; // Quote column names
+    }, $columnNames));
+
+    try {
+        $records = $DB->get_records_sql("SELECT $columnList FROM {{$moodleTable}}");
+    } catch (Exception $e) {
+        echo "✗ SQL error for $moodleTable: " . $e->getMessage() . "<br><hr>";
+        continue;
+    }
 
     if (!empty($records)) {
         foreach ($records as $record) {
@@ -57,14 +68,14 @@ foreach ($tableMap as $moodleTable => $pgTable) {
                 $values[] = $escaped;
 
                 if ($col !== 'id') {
-                    $updates[] = "$col = EXCLUDED.$col";
+                    $updates[] = "\"$col\" = EXCLUDED.\"$col\"";
                 }
             }
 
             $valuesList = implode(", ", $values);
             $updateClause = implode(", ", $updates);
 
-            $sql = "INSERT INTO institute1.$pgTable ($columnList)
+            $sql = "INSERT INTO institute1.\"$pgTable\" ($columnList)
                     VALUES ($valuesList)
                     ON CONFLICT (id) DO UPDATE SET $updateClause";
 
@@ -73,15 +84,17 @@ foreach ($tableMap as $moodleTable => $pgTable) {
             if ($pgResult) {
                 echo "✓ Row inserted/updated in $pgTable.<br>";
             } else {
-                echo "✗ Error in $pgTable: " . pg_last_error($pg_conn) . "<br>";
+                echo "✗ PostgreSQL error in $pgTable: " . pg_last_error($pg_conn) . "<br>";
             }
         }
     } else {
-        echo "No data found in $moodleTable or an error occurred.<br>";
+        echo "No data found in $moodleTable.<br>";
     }
 
     echo "<hr>";
 }
+
+
 
 pg_close($pg_conn);
 ?>
