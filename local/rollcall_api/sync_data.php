@@ -13,20 +13,20 @@ if (!$pg_conn) {
 
 // Define source => target table pairs
 $tableMap = [
-    'mdl_attendence' => 'mdl_attendence',
-    'mdl_attendence_log' => 'mdl_attendence_log',
-    'mdl_attendence_sessions' => 'mdl_attendence_sessions',
-    'mdl_context' => 'mdl_context',
-    'mdl_course' => 'mdl_course',
-    'mdl_course_categories' => 'mdl_course_categories',
-    'mdl_course_modules' => 'mdl_course_modules',
-    'mdl_enrol' => 'mdl_enrol',
-    'mdl_groups' => 'mdl_groups',
-    'mdl_groups_members' => 'mdl_groups_members',
-    'mdl_role' => 'mdl_role',
-    'mdl_role_assignments' => 'mdl_role_assignments',
-    'mdl_user' => 'mdl_user',
-    'mdl_user_enrolments' => 'mdl_user_enrolments'
+    'attendence' => 'mdl_attendence',
+    'attendence_log' => 'mdl_attendence_log',
+    'attendence_sessions' => 'mdl_attendence_sessions',
+    'context' => 'mdl_context',
+    'course' => 'mdl_course',
+    'course_categories' => 'mdl_course_categories',
+    'course_modules' => 'mdl_course_modules',
+    'enrol' => 'mdl_enrol',
+    'groups' => 'mdl_groups',
+    'groups_members' => 'mdl_groups_members',
+    'role' => 'mdl_role',
+    'role_assignments' => 'mdl_role_assignments',
+    'user' => 'mdl_user',
+    'user_enrolments' => 'mdl_user_enrolments'
 ];
 
 // Loop through each table pair
