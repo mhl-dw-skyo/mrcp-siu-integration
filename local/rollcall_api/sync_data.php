@@ -33,13 +33,18 @@ $tableMap = [
 foreach ($tableMap as $moodleTable => $pgTable) {
     echo "<strong>Migrating $moodleTable ➝ $pgTable</strong><br>";
 
-    // Get columns dynamically (only works in Moodle if we use SQL)
-    $columns = $DB->get_columns($moodleTable); // returns stdClass for each column
-    $columnNames = array_keys((array)$columns);
+    // Get column names
+    $columns = $DB->get_columns($moodleTable);
+    if (!$columns) {
+        echo "✗ Could not retrieve columns for $moodleTable.<br><hr>";
+        continue;
+    }
+
+    $columnNames = array_keys($columns);
     $columnList = implode(", ", $columnNames);
 
     // Fetch all records from Moodle
-    $records = $DB->get_records_sql("SELECT $columnList FROM {{$moodleTable}}");
+    $records = $DB->get_records_sql("SELECT $columnList FROM $moodleTable");
 
     if (!empty($records)) {
         foreach ($records as $record) {
@@ -51,7 +56,7 @@ foreach ($tableMap as $moodleTable => $pgTable) {
                 $escaped = is_null($value) ? 'NULL' : pg_escape_literal($pg_conn, $value);
                 $values[] = $escaped;
 
-                if ($col != 'id') {
+                if ($col !== 'id') {
                     $updates[] = "$col = EXCLUDED.$col";
                 }
             }
@@ -72,7 +77,7 @@ foreach ($tableMap as $moodleTable => $pgTable) {
             }
         }
     } else {
-        echo "No data found or error in $moodleTable.<br>";
+        echo "No data found in $moodleTable or an error occurred.<br>";
     }
 
     echo "<hr>";
