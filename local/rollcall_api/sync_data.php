@@ -60,7 +60,7 @@ foreach ($tableMap as $moodleTable => $pgTable) {
             $valuesList = implode(", ", $values);
             $updateClause = implode(", ", $updates);
 
-            $sql = "INSERT INTO test_db.institute1.$pgTable ($columnList)
+            $sql = "INSERT INTO institute1.$pgTable ($columnList)
                     VALUES ($valuesList)
                     ON CONFLICT (id) DO UPDATE SET $updateClause";
 
