@@ -5,7 +5,6 @@ header('Content-Type: text/html');
 global $DB;
 
 // PostgreSQL connection
-$pg_conn = pg_connect("host=localhost dbname=your_pg_db user=postgres password=your_password");
 $pg_conn = pg_connect("host=my-roll-call-test-db.cve4g4mk6wmm.eu-central-1.rds.amazonaws.com dbname=test_db user=postgres password=Bh4]#z9rX5");
 
 if (!$pg_conn) {
