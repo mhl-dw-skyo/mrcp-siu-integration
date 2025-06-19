@@ -41,17 +41,16 @@ $schema = 'institute_1';
 // ✅ Get all available tables
 $availableTables = $DB->get_tables();
 
+$batchSize = 200;
+
 foreach ($baseTables as $baseTable) {
-    $moodleTable = $prefix . $baseTable; // final table name
-    // $pgTable = $moodleTable;
-
-    $pgTable = "mdl_" . $baseTable; // ✅ Fix: PostgreSQL table name
-
+    $moodleTable = $prefix . $baseTable;
+    $pgTable = "mdl_" . $baseTable;
 
     echo "<strong>🔄 Migrating <code>$moodleTable</code> ➝ <code>$pgTable</code></strong><br>";
 
     if (!in_array($moodleTable, $availableTables)) {
-        echo "⚠ Table <code>$moodleTable</code> not found in Moodle database.<br><hr>";
+        echo "⚠ Table <code>$moodleTable</code> not found.<br><hr>";
         continue;
     }
 
@@ -64,40 +63,55 @@ foreach ($baseTables as $baseTable) {
     $columnNames = array_keys((array)$columns);
     $columnList = implode(", ", array_map(fn($col) => "\"$col\"", $columnNames));
 
-    // Fetch records
-    $records = $DB->get_records_sql("SELECT * FROM {{$moodleTable}}");
+    // ✅ Get max ID already inserted into PostgreSQL
+    $res = pg_query($pg_conn, "SELECT MAX(id) AS max_id FROM \"$schema\".\"$pgTable\"");
+    $row = pg_fetch_assoc($res);
+    $maxId = $row['max_id'] ?? 0;
+
+    // ✅ Fetch only new records from Moodle
+    $records = $DB->get_records_sql("SELECT * FROM {{$moodleTable}} WHERE id > $maxId ORDER BY id ASC");
 
     if (!empty($records)) {
+        $batch = [];
+        $counter = 0;
+
         foreach ($records as $record) {
             $values = [];
-            $updates = [];
 
             foreach ($columnNames as $col) {
                 $value = $record->$col ?? null;
                 $escaped = is_null($value) ? 'NULL' : pg_escape_literal($pg_conn, $value);
                 $values[] = $escaped;
-                if ($col !== 'id') {
-                    $updates[] = "\"$col\" = EXCLUDED.\"$col\"";
-                }
             }
 
-            $valuesList = implode(", ", $values);
-            $updateClause = implode(", ", $updates);
+            $batch[] = '(' . implode(", ", $values) . ')';
+            $counter++;
 
-            $sql = "INSERT INTO \"$schema\".\"$pgTable\" ($columnList)
-                    VALUES ($valuesList)
+            // ✅ Execute batch if batch size reached
+            if (count($batch) === $batchSize) {
+                $valuesBlock = implode(",\n", $batch);
+                $sql = "INSERT INTO \"$schema\".\"$pgTable\" ($columnList)
+                    VALUES $valuesBlock
                     ON CONFLICT DO NOTHING";
 
-            $pgResult = pg_query($pg_conn, $sql);
-
-            if ($pgResult) {
-                echo "✔ Row inserted/updated in <code>$pgTable</code><br>";
-            } else {
-                echo "✗ PostgreSQL error in <code>$pgTable</code>: " . pg_last_error($pg_conn) . "<br>";
+                pg_query($pg_conn, $sql);
+                echo "✔ Inserted batch of $batchSize into <code>$pgTable</code><br>";
+                $batch = [];
             }
         }
+
+        // ✅ Insert remaining rows (if any)
+        if (!empty($batch)) {
+            $valuesBlock = implode(",\n", $batch);
+            $sql = "INSERT INTO \"$schema\".\"$pgTable\" ($columnList)
+                    VALUES $valuesBlock
+                    ON CONFLICT DO NOTHING";
+
+            pg_query($pg_conn, $sql);
+            echo "✔ Inserted remaining " . count($batch) . " rows into <code>$pgTable</code><br>";
+        }
     } else {
-        echo "⚠ No records found in <code>$moodleTable</code><br>";
+        echo "⚠ No new records found in <code>$moodleTable</code><br>";
     }
 
     echo "<hr>";
