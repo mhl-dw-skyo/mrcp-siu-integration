@@ -84,20 +84,11 @@ foreach ($baseTables as $baseTable) {
             $valuesList = implode(", ", $values);
             $updateClause = implode(", ", $updates);
 
-            // Use custom conflict key for user_enrolments
-            $conflictKey = 'id';
-            if ($baseTable === 'user_enrolments') {
-                $conflictKey = '(enrolid, userid)';
-            }
-
             $sql = "INSERT INTO \"$schema\".\"$pgTable\" ($columnList)
-                VALUES ($valuesList)
-                ON CONFLICT $conflictKey DO UPDATE SET $updateClause";
+                    VALUES ($valuesList)
+                    ON CONFLICT DO NOTHING";
 
             $pgResult = pg_query($pg_conn, $sql);
-
-
-
 
             if ($pgResult) {
                 echo "✔ Row inserted/updated in <code>$pgTable</code><br>";
