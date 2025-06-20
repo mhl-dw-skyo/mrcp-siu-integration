@@ -19,6 +19,7 @@ $baseTables = [
     'attendance',
     'attendance_log',
     'attendance_sessions',
+    'attendance_statuses',
     'context',
     'course',
     'course_categories',
